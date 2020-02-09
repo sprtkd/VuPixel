@@ -12,16 +12,16 @@
 
 #include <fix_fft.h> // fixed point Fast Fourier Transform library
 #define AUDIO_IN A0 // audio input port
-#define PIXEL_COLS 64 //Not greater than 64
+#define PIXEL_COLS 10 //Not greater than 64
 #define PIXEL_ROWS 20
-#define FFT_OUTPUT_BUFFER_SIZE PIXEL_COLS
+#define FFT_OUTPUT_BUFFER_SIZE 64
 #define READ_BUFFER_SIZE FFT_OUTPUT_BUFFER_SIZE*2
 #define FFT_OUT_MAX_AMP 100
 #define AUDIO_GAIN 5
 #define BAR_GAIN 1
 
 void setup() {
-  
+
   analogReference(DEFAULT); // use the default analog reference of 5 volts (on 5V Arduino boards)
   pinMode(A0, INPUT);
   Serial.begin(9600); // setup serial
@@ -63,9 +63,27 @@ void convertOutput(char re[], char im[], int out[]) {
 }
 
 void scaleOutput(int fftOut[], int scaledOut[]) {
+  int i, j;
+  //scaling by columns
+  int colScaler = FFT_OUTPUT_BUFFER_SIZE / PIXEL_COLS;
+  if (colScaler * PIXEL_COLS < FFT_OUTPUT_BUFFER_SIZE) {
+    colScaler = colScaler + 1;
+  }
+  for (i = 0; i < PIXEL_COLS; i++) {
+    int currAvgOut = 0;
+    for (j = 0; j < colScaler; j++) {
+      int currFFtPos = (i * colScaler) + j;
+      if (currFFtPos >= FFT_OUTPUT_BUFFER_SIZE) {
+        break;
+      }
+      currAvgOut = currAvgOut + fftOut[currFFtPos];
+    }
+    scaledOut[i] = (float)currAvgOut / j;
+  }
+
   //scaling by rows
-  for (int i = 0; i < PIXEL_COLS; i++) {
-    scaledOut[i] = fftOut[i]*BAR_GAIN;
+  for (i = 0; i < PIXEL_COLS; i++) {
+    scaledOut[i] = (float) scaledOut[i] * BAR_GAIN;
     if (scaledOut[i] > FFT_OUT_MAX_AMP)
       scaledOut[i] = FFT_OUT_MAX_AMP;
     scaledOut[i] = scaledOut[i] / ((float)FFT_OUT_MAX_AMP / PIXEL_ROWS);
