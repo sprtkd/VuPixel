@@ -12,10 +12,10 @@
 
 #include <fix_fft.h> // fixed point Fast Fourier Transform library
 #define AUDIO_IN A0 // audio input port
-#define PIXEL_COLS 10
-#define PIXEL_ROWS 20 //Not greater than 64
+#define PIXEL_COLS 64 //Not greater than 64
+#define PIXEL_ROWS 20
+#define FFT_OUTPUT_BUFFER_SIZE PIXEL_COLS
 #define READ_BUFFER_SIZE FFT_OUTPUT_BUFFER_SIZE*2
-#define FFT_OUTPUT_BUFFER_SIZE PIXEL_ROWS
 #define FFT_OUT_MAX_AMP 100
 #define AUDIO_GAIN 5
 #define BAR_GAIN 1
@@ -64,7 +64,7 @@ void convertOutput(char re[], char im[], int out[]) {
 
 void scaleOutput(int fftOut[], int scaledOut[]) {
   //scaling by rows
-  for (i = 0; i < PIXEL_COLS; i++) {
+  for (int i = 0; i < PIXEL_COLS; i++) {
     scaledOut[i] = fftOut[i]*BAR_GAIN;
     if (scaledOut[i] > FFT_OUT_MAX_AMP)
       scaledOut[i] = FFT_OUT_MAX_AMP;
