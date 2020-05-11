@@ -47,6 +47,11 @@ void setup() {
 };
 
 void loop() {
+  //spectrumAnalyzeFlow();
+  vumeterFlow();
+};
+
+void spectrumAnalyzeFlow() {
   char realFFTRes[READ_BUFFER_SIZE], imaginaryFFTRes[READ_BUFFER_SIZE]; // real and imaginary FFT result arrays
   int outFreqVals[PIXEL_COLS], fftOutBuf[FFT_OUTPUT_BUFFER_SIZE];
   readAndScale(realFFTRes, imaginaryFFTRes);
@@ -55,23 +60,36 @@ void loop() {
   scaleOutput(fftOutBuf, outFreqVals);
   //printData(outFreqVals, PIXEL_COLS);
   lightUpLEDMatrix(outFreqVals);
-};
+}
+
+void vumeterFlow() {
+  int reading = map(getSample(), 0, 1023, 0, PIXEL_ROWS);
+  int outFreqVals[PIXEL_COLS];
+  for (int i = 0; i < PIXEL_COLS; i++) {
+    outFreqVals[i] = reading;
+  }
+  lightUpLEDMatrix(outFreqVals);
+}
 
 void readAndScale(char re[], char im[]) {
   // The FFT real/imaginary data are stored in a char data type as a signed -128 to 127 number
   // This allows a waveform to swing centered around a 0 reference data point
   // The ADC returns data between 0-1023 so it is scaled to fit within a char by dividing by 4 and subtracting 128.
   // eg (0 / 4) - 128 = -128 and (1023 / 4) - 128 = 127
-  for (byte i = 0; i < READ_BUFFER_SIZE; i++) {
-    int sample = analogRead(AUDIO_IN); // read analog input samples from ADC
-    if (sample <= AUDIO_NOISE_THRESHOLD)
-      sample = 0;
-    float sampleAmped = (float) sample * AUDIO_GAIN;
-    if (sampleAmped > 1023)
-      sampleAmped = 1023;
-    re[i] = (int) sampleAmped / 4 - 128; // scale the samples to fit within a char variable
+  for (int i = 0; i < READ_BUFFER_SIZE; i++) {
+    re[i] = getSample() / 4 - 128; // scale the samples to fit within a char variable
     im[i] = 0; // there are no imaginary samples associated with the time domain so set to 0
   }
+}
+
+int getSample() {
+  int sample = analogRead(AUDIO_IN); // read analog input samples from ADC
+  if (sample <= AUDIO_NOISE_THRESHOLD)
+    sample = 0;
+  float sampleAmped = (float) sample * AUDIO_GAIN;
+  if (sampleAmped > 1023)
+    sampleAmped = 1023;
+  return sampleAmped;
 }
 
 void convertOutput(char re[], char im[], int out[]) {
@@ -79,7 +97,7 @@ void convertOutput(char re[], char im[], int out[]) {
   // Each frequency bin will represent a center frequency of approximately (9 KHz / 40 samples) = 225 Hz
   // Due to Nyquist sampling requirements, we can only consider sampled frequency data up to (sampling rate / 2) or (9 KHz / 2) = 4.5 KHz
   // Therefore we only acknowledge the first 64 frequency bins [0..20] = [0..4.5KHz]
-  for (byte i = 0; i < FFT_OUTPUT_BUFFER_SIZE; i++) {
+  for (int i = 0; i < FFT_OUTPUT_BUFFER_SIZE; i++) {
     out[i] = sqrt(re[i] * re[i] + im[i] * im[i]);     // frequency magnitude is the square root of the sum of the squares of the real and imaginary parts of a vector
   };
 }
